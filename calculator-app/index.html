@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calculator</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1c1c1e;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+
+  .calculator {
+    width: 320px;
+    padding: 20px;
+    background: #000;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  }
+
+  .display {
+    height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 0 10px 12px;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .expression {
+    min-height: 20px;
+    font-size: 16px;
+    color: #8e8e93;
+    white-space: nowrap;
+  }
+
+  .result {
+    font-size: 48px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  button {
+    height: 68px;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    color: #fff;
+    background: #333337;
+    transition: filter 0.1s, transform 0.05s;
+  }
+
+  button:hover { filter: brightness(1.25); }
+  button:active { transform: scale(0.95); }
+
+  button.func { background: #a5a5a5; color: #000; }
+  button.op { background: #ff9f0a; }
+  button.op.active { background: #fff; color: #ff9f0a; }
+  button.wide { grid-column: span 2; border-radius: 34px; text-align: left; padding-left: 28px; }
+</style>
+</head>
+<body>
+  <div class="calculator">
+    <div class="display">
+      <div class="expression" id="expression"></div>
+      <div class="result" id="result">0</div>
+    </div>
+
+    <div class="buttons">
+      <button class="func" data-action="clear">AC</button>
+      <button class="func" data-action="sign">+/-</button>
+      <button class="func" data-action="percent">%</button>
+      <button class="op" data-op="/">÷</button>
+
+      <button data-digit="7">7</button>
+      <button data-digit="8">8</button>
+      <button data-digit="9">9</button>
+      <button class="op" data-op="*">×</button>
+
+      <button data-digit="4">4</button>
+      <button data-digit="5">5</button>
+      <button data-digit="6">6</button>
+      <button class="op" data-op="-">−</button>
+
+      <button data-digit="1">1</button>
+      <button data-digit="2">2</button>
+      <button data-digit="3">3</button>
+      <button class="op" data-op="+">+</button>
+
+      <button class="wide" data-digit="0">0</button>
+      <button data-action="dot">.</button>
+      <button class="op" data-action="equals">=</button>
+    </div>
+  </div>
+
+<script>
+  const resultEl = document.getElementById("result");
+  const expressionEl = document.getElementById("expression");
+  const opButtons = document.querySelectorAll("button[data-op]");
+
+  let current = "0";      // number currently being typed / shown
+  let previous = null;    // first operand waiting for an operator
+  let operator = null;    // pending operator: + - * /
+  let overwrite = false;  // next digit replaces the display
+  let error = false;
+
+  const OP_SYMBOLS = { "+": "+", "-": "−", "*": "×", "/": "÷" };
+
+  function format(value) {
+    if (!isFinite(value)) return "Error";
+    // Keep long results readable and avoid float noise like 0.1 + 0.2
+    return String(parseFloat(value.toPrecision(12)));
+  }
+
+  function render() {
+    resultEl.textContent = error ? "Error" : current;
+    expressionEl.textContent = previous !== null && operator
+      ? `${format(parseFloat(previous))} ${OP_SYMBOLS[operator]}`
+      : "";
+    opButtons.forEach(b => b.classList.toggle("active", b.dataset.op === operator && overwrite));
+  }
+
+  function inputDigit(digit) {
+    if (error) clearAll();
+    if (overwrite || current === "0") {
+      current = digit;
+      overwrite = false;
+    } else if (current.replace(/[-.]/g, "").length < 15) {
+      current += digit;
+    }
+    render();
+  }
+
+  function inputDot() {
+    if (error) clearAll();
+    if (overwrite) {
+      current = "0.";
+      overwrite = false;
+    } else if (!current.includes(".")) {
+      current += ".";
+    }
+    render();
+  }
+
+  function calculate(a, b, op) {
+    switch (op) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "*": return a * b;
+      case "/": return b === 0 ? Infinity : a / b;
+    }
+    return b;
+  }
+
+  function setOperator(op) {
+    if (error) return;
+    if (operator && !overwrite) {
+      // Chain: 2 + 3 + → evaluate pending operation first
+      const result = calculate(parseFloat(previous), parseFloat(current), operator);
+      if (!isFinite(result)) return setError();
+      current = format(result);
+      previous = current;
+    } else {
+      previous = current;
+    }
+    operator = op;
+    overwrite = true;
+    render();
+  }
+
+  function equals() {
+    if (error || !operator) return;
+    const result = calculate(parseFloat(previous), parseFloat(current), operator);
+    if (!isFinite(result)) return setError();
+    current = format(result);
+    previous = null;
+    operator = null;
+    overwrite = true;
+    render();
+  }
+
+  function setError() {
+    error = true;
+    current = "Error";
+    previous = null;
+    operator = null;
+    overwrite = true;
+    render();
+  }
+
+  function clearAll() {
+    current = "0";
+    previous = null;
+    operator = null;
+    overwrite = false;
+    error = false;
+    render();
+  }
+
+  function toggleSign() {
+    if (error) return;
+    if (current === "0") return;
+    current = current.startsWith("-") ? current.slice(1) : "-" + current;
+    render();
+  }
+
+  function percent() {
+    if (error) return;
+    current = format(parseFloat(current) / 100);
+    overwrite = false;
+    render();
+  }
+
+  // Mouse / touch
+  document.querySelector(".buttons").addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.digit !== undefined) return inputDigit(btn.dataset.digit);
+    if (btn.dataset.op) return setOperator(btn.dataset.op);
+    switch (btn.dataset.action) {
+      case "clear": return clearAll();
+      case "sign": return toggleSign();
+      case "percent": return percent();
+      case "dot": return inputDot();
+      case "equals": return equals();
+    }
+  });
+
+  // Keyboard
+  document.addEventListener("keydown", e => {
+    const key = e.key;
+    if (/^[0-9]$/.test(key)) return inputDigit(key);
+    if (key === ".") return inputDot();
+    if (["+", "-", "*", "/"].includes(key)) {
+      e.preventDefault();
+      return setOperator(key);
+    }
+    if (key === "Enter" || key === "=") { e.preventDefault(); return equals(); }
+    if (key === "Backspace") {
+      if (error || overwrite) return;
+      current = current.length > 1 ? current.slice(0, -1) : "0";
+      if (current === "-") current = "0";
+      return render();
+    }
+    if (key === "Escape" || key === "Delete") return clearAll();
+    if (key === "%") return percent();
+  });
+
+  render();
+</script>
+</body>
+</html>

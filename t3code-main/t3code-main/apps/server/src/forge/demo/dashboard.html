@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>T3 Forge</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fafafa; --surface: #ffffff; --sunken: #f4f4f5; --ink: #18181b; --ink-2: #52525b; --ink-3: #a1a1aa;
+    --line: #e4e4e7; --line-2: #d4d4d8;
+    --accent: #4f46e5; --accent-ink: #ffffff; --accent-soft: #eef2ff;
+    --ok: #15803d; --ok-soft: #ecfdf3; --warn: #b45309; --warn-soft: #fffbeb; --bad: #b91c1c; --bad-soft: #fef2f2;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0b0b0d; --surface: #131316; --sunken: #1a1a1e; --ink: #f4f4f5; --ink-2: #a1a1aa; --ink-3: #63636b;
+      --line: #232327; --line-2: #2e2e33;
+      --accent: #818cf8; --accent-ink: #0b0b0d; --accent-soft: #1e1b4b;
+      --ok: #4ade80; --ok-soft: #0f2a1a; --warn: #fbbf24; --warn-soft: #2a2110; --bad: #f87171; --bad-soft: #2c1414;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0b0b0d; --surface: #131316; --sunken: #1a1a1e; --ink: #f4f4f5; --ink-2: #a1a1aa; --ink-3: #63636b;
+    --line: #232327; --line-2: #2e2e33;
+    --accent: #818cf8; --accent-ink: #0b0b0d; --accent-soft: #1e1b4b;
+    --ok: #4ade80; --ok-soft: #0f2a1a; --warn: #fbbf24; --warn-soft: #2a2110; --bad: #f87171; --bad-soft: #2c1414;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); }
+  body { margin: 0; color: var(--ink); font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px 48px; }
+
+  /* top bar */
+  .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: -.01em; margin-right: auto; }
+  .brand i { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); transform: rotate(45deg); display: inline-block; }
+  .brand span { color: var(--ink-3); font-weight: 400; }
+
+  .seg { display: inline-flex; background: var(--sunken); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+  .seg button { border: 0; background: transparent; color: var(--ink-2); padding: 5px 10px; border-radius: 7px; font: inherit; font-size: 13px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line-2); }
+  .seg button:disabled { color: var(--ink-3); cursor: not-allowed; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); white-space: nowrap; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); } .dot.accent { background: var(--accent); }
+
+  button.btn { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); cursor: pointer; }
+  button.btn:hover { border-color: var(--ink-3); }
+  button.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  button.btn.ghost { border-color: transparent; background: transparent; color: var(--ink-2); }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* hero */
+  .hero { padding: 36px 0 8px; }
+  .eyebrow { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; }
+  h1 { font-size: clamp(22px, 3.2vw, 30px); line-height: 1.2; letter-spacing: -.02em; font-weight: 600; margin: 6px 0 4px; max-width: 30ch; text-wrap: balance; }
+  .lede { color: var(--ink-2); margin: 0; max-width: 70ch; }
+
+  .rail { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 24px 0 16px; }
+  .step { display: grid; gap: 6px; }
+  .step .bar { height: 3px; border-radius: 2px; background: var(--line); }
+  .step.done .bar { background: var(--ink); } .step.active .bar { background: var(--accent); } .step.failed .bar { background: var(--bad); } .step.skipped .bar { background: repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 8px); }
+  .step .name { font-size: 12px; color: var(--ink-3); }
+  .step.done .name, .step.active .name { color: var(--ink); }
+  .step .hint { font-size: 11px; color: var(--ink-3); }
+
+  .action { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 14px 16px; }
+  .action .what { display: grid; gap: 2px; min-width: 0; }
+  .action .what strong { font-weight: 600; }
+  .action .what span { color: var(--ink-2); font-size: 13px; }
+  .action pre { margin: 8px 0 0; }
+
+  /* cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; margin-top: 16px; }
+  .card { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 16px; min-width: 0; }
+  .card.full { grid-column: 1 / -1; }
+  .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .card h2 small { font-weight: 400; color: var(--ink-3); font-size: 12px; }
+  .empty { color: var(--ink-3); font-size: 13px; }
+  .muted { color: var(--ink-2); } .faint { color: var(--ink-3); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .stack { display: grid; gap: 10px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-width: 0; }
+  .between { justify-content: space-between; }
+  pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 12px/1.55 var(--mono); color: var(--ink-2); }
+  .code { background: var(--sunken); border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; max-height: 240px; overflow: auto; }
+  details summary { cursor: pointer; color: var(--ink-2); font-size: 12px; }
+  details[open] summary { margin-bottom: 6px; }
+
+  .agent { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+  .agent .role { font-weight: 600; text-transform: capitalize; }
+  .acts { display: grid; gap: 3px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .acts div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acts b { font-weight: 500; color: var(--ink-3); display: inline-block; min-width: 52px; }
+
+  .prob { display: grid; grid-template-columns: minmax(110px, auto) 1fr 44px; gap: 10px; align-items: center; font-size: 13px; }
+  .prob .track { height: 6px; background: var(--sunken); border-radius: 3px; overflow: hidden; }
+  .prob .track i { display: block; height: 100%; background: var(--ink-3); }
+  .prob.chosen .track i { background: var(--accent); }
+  .prob .pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .prob.chosen .name { font-weight: 600; }
+
+  .memory { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .memory:first-child { border-top: 0; padding-top: 0; }
+  .form { display: grid; gap: 8px; margin-top: 10px; }
+  input[type=text] { font: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--bg); color: var(--ink); width: 100%; }
+  input[type=text]:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* timeline */
+  .tl { display: grid; }
+  .ev { display: grid; grid-template-columns: 34px 58px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .ev:hover { background: var(--sunken); }
+  .ev.open { background: var(--sunken); }
+  .ev .seq, .ev .t { font-family: var(--mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .ev .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev .who { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+  .ev.minor .what { color: var(--ink-2); }
+  .detail { margin: 2px 8px 10px 102px; display: grid; gap: 6px; }
+  @media (max-width: 640px) { .ev { grid-template-columns: 30px minmax(0, 1fr); } .ev .t, .ev .who { display: none; } .detail { margin-left: 8px; } }
+
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--sunken); color: var(--ink-2); border: 1px solid var(--line); white-space: nowrap; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .tag.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+  .tag.accent { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+
+  /* graph */
+  .graph-box { overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+  svg text { font: 11px var(--mono); fill: var(--ink); }
+  svg .lane-label { fill: var(--ink-3); font-size: 10px; letter-spacing: .04em; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-3); margin-top: 8px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 16px; height: 2px; vertical-align: middle; margin-right: 6px; background: var(--ink-3); }
+  .legend i.new { background: var(--accent); height: 3px; }
+
+  .foot { margin-top: 28px; color: var(--ink-3); font-size: 12px; max-width: 80ch; }
+  #toast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 9px; font-size: 13px; max-width: calc(100% - 32px); }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="wrap">
+    <div class="brand"><i></i>Forge <span>· T3 Code</span></div>
+    <div class="seg" role="group" aria-label="Agents">
+      <button id="modeScripted" type="button">Scripted</button>
+      <button id="modeClaude" type="button">Claude Code</button>
+    </div>
+    <span class="pill" id="jevPill"><span class="dot"></span><span></span></span>
+    <button class="btn ghost" id="btnReset" type="button">Reset</button>
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow" id="eyebrow">Mission</div>
+    <h1 id="title">Watch coding agents coordinate, with every step on the record.</h1>
+    <p class="lede" id="lede">Forge routes a mission with a decision model, briefs agents with your project's decisions, gates their handoff on an explicit contract, and only calls it done when the real test run exits 0.</p>
+    <div class="rail" id="rail"></div>
+    <div class="action" id="action"></div>
+  </section>
+
+  <div class="grid">
+    <section class="card"><h2>Agents <small id="agentsSub"></small></h2><div id="agents" class="stack"></div></section>
+    <section class="card"><h2>Route decision <small id="decisionSub"></small></h2><div id="decision"></div></section>
+    <section class="card"><h2>Project brain <small>decisions agents must follow</small></h2><div id="memories"></div>
+      <div class="form">
+        <input type="text" id="dTitle" placeholder="Decision" value="Reuse the existing auth service" aria-label="Decision title">
+        <input type="text" id="dBody" placeholder="Detail" value="Do not introduce Auth0; extend the existing JWT auth service." aria-label="Decision detail">
+        <div><button class="btn" id="btnDecision" type="button">Save decision</button></div>
+      </div>
+    </section>
+    <section class="card"><h2>Verification <small id="verifySub"></small></h2><div id="verification"></div></section>
+    <section class="card full"><h2>Audit trail <small>every state change, with its cause</small></h2><div id="timeline" class="tl"></div></section>
+    <section class="card full"><h2>Dependency graph <small>imports read from source; highlighted edges were added by this mission</small></h2>
+      <div class="graph-box"><svg id="graph" role="img" aria-label="Import graph"></svg></div>
+      <div class="legend"><span><i></i>existing import</span><span><i class="new"></i>added by agents</span><span id="edgeDetail" class="mono"></span></div>
+    </section>
+  </div>
+  <p class="foot" id="foot"></p>
+</main>
+<div id="toast" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  var state = null, lastJson = "", openEvent = null, selectedEdge = null, toastTimer = 0;
+  var DEFAULT_TITLE = document.getElementById("title").textContent;
+  var DEFAULT_LEDE = document.getElementById("lede").textContent;
+  var mode = "scripted";
+  try { mode = localStorage.getItem("forge.agentMode") || "scripted"; } catch (e) {}
+
+  function $(id) { return document.getElementById(id); }
+  function h(tag, props) {
+    var node = document.createElement(tag);
+    if (props) for (var k in props) {
+      if (k === "text") node.textContent = props[k];
+      else if (k === "class") node.className = props[k];
+      else if (k.slice(0, 2) === "on") node.addEventListener(k.slice(2), props[k]);
+      else node.setAttribute(k, props[k]);
+    }
+    for (var i = 2; i < arguments.length; i++) { var c = arguments[i]; if (c == null || c === false) continue; node.appendChild(typeof c === "string" ? document.createTextNode(c) : c); }
+    return node;
+  }
+  function put(target, children) { target.replaceChildren.apply(target, children.filter(Boolean)); }
+  function svg(tag, attrs) { var n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (var k in attrs) n.setAttribute(k, attrs[k]); return n; }
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 4000); }
+
+  function api(path, body) {
+    return fetch(path, { method: body === undefined ? "GET" : "POST", headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.statusText); return j; }); });
+  }
+  function act(path, body) { return api(path, body || {}).then(function () { lastJson = ""; return poll(); }).catch(function (e) { toast(e.message); }); }
+
+  var LABEL = {
+    MISSION_CREATED: "Mission created", MEMORY_RETRIEVED: "Project decisions retrieved", DECISION_MADE: "Route decided",
+    TASK_CREATED: "Task created", TASK_STARTED: "Agent started", CONTRACT_PROPOSED: "Contract proposed",
+    CONTRACT_ACKNOWLEDGED: "Contract acknowledged", TASK_UNBLOCKED: "Task unblocked", TASK_COMPLETED: "Agent finished",
+    TASK_FAILED: "Agent failed", GRAPH_EDGE_ADDED: "Import discovered", VERIFICATION_STARTED: "Tests started",
+    VERIFICATION_FINISHED: "Tests finished", AGENT_ACTIVITY: "Agent activity"
+  };
+  function roleOf(s, taskId) { var t = s.tasks.filter(function (x) { return x.id === taskId; })[0]; return t ? t.role : "task"; }
+  function who(s, ref) { if (!ref) return ""; if (ref.indexOf("task:") === 0) return roleOf(s, ref.slice(5)); return ref.replace("_", " "); }
+  function describe(s, e) {
+    var p = e.payload || {};
+    switch (e.type) {
+      case "AGENT_ACTIVITY":
+        if (p.activity === "finished") return roleOf(s, e.taskId) + " agent done" + (p.turns ? " · " + p.turns + " turns" : "") + (p.durationMs ? " · " + Math.round(p.durationMs / 1000) + "s" : "");
+        return roleOf(s, e.taskId) + " " + p.activity + " " + (p.path || p.command || "");
+      case "TASK_CREATED": return "Task created · " + p.role + (p.dependsOn && p.dependsOn.length ? " (waits on contract)" : "");
+      case "TASK_STARTED": return roleOf(s, e.taskId) + " agent started";
+      case "TASK_COMPLETED": return roleOf(s, e.taskId) + " agent finished";
+      case "TASK_FAILED": return roleOf(s, e.taskId) + " agent failed · " + (p.reason || "");
+      case "TASK_UNBLOCKED": return roleOf(s, e.taskId) + " unblocked";
+      case "DECISION_MADE": return "Route decided · " + (p.decision ? p.decision.selection.replace("_", " ") + " via " + p.decision.provider.replace("_", " ") : "");
+      case "MEMORY_RETRIEVED": return "Project decisions retrieved · " + (p.memoryIds ? p.memoryIds.length : 0);
+      case "GRAPH_EDGE_ADDED": return "Import discovered · " + String(p.from || "").replace("file:", "") + " → " + String(p.to || "").replace("file:", "");
+      case "CONTRACT_PROPOSED": return "Contract proposed · " + (p.contract && p.contract.endpoint ? p.contract.endpoint : "");
+      case "VERIFICATION_FINISHED": return "Tests finished · exit " + p.exitCode;
+      default: return LABEL[e.type] || e.type;
+    }
+  }
+  function elapsed(s, e) {
+    if (!s.events.length) return "";
+    var d = (Date.parse(e.timestamp) - Date.parse(s.events[0].timestamp)) / 1000;
+    return "+" + (d < 10 ? d.toFixed(1) : Math.round(d)) + "s";
+  }
+  function has(s, type) { return s.events.some(function (e) { return e.type === type; }); }
+
+  /* ---------- top bar ---------- */
+  function renderTop(s) {
+    var live = s.liveAgents && s.liveAgents.claude && s.liveAgents.claude.available;
+    if (!live && mode === "claude") mode = "scripted";
+    $("modeScripted").setAttribute("aria-pressed", String(mode === "scripted"));
+    $("modeClaude").setAttribute("aria-pressed", String(mode === "claude"));
+    $("modeClaude").disabled = !live;
+    $("modeClaude").title = live ? "Live agents: " + s.liveAgents.claude.version : "claude CLI not found on this machine";
+    var pill = $("jevPill");
+    pill.firstChild.className = "dot " + (s.jevConfigured ? "ok" : "warn");
+    pill.lastChild.textContent = s.jevConfigured ? "Jev connected" : "Jev off · rules fallback";
+  }
+
+  /* ---------- hero ---------- */
+  function renderHero(s) {
+    var m = s.mission;
+    $("eyebrow").textContent = m ? "Mission · " + m.status.replace("_", " ") : "No mission yet";
+    $("title").textContent = m ? m.title : DEFAULT_TITLE;
+    $("lede").textContent = m ? m.description : DEFAULT_LEDE;
+
+    var single = s.tasks.length === 1;
+    var allDone = s.tasks.length > 0 && s.tasks.every(function (t) { return t.status === "completed"; });
+    var anyFailed = s.tasks.some(function (t) { return t.status === "failed"; });
+    var fin = s.verification;
+    var steps = [
+      ["Brain", has(s, "MEMORY_RETRIEVED") ? "done" : "", "decisions"],
+      ["Route", has(s, "DECISION_MADE") ? "done" : (m ? "active" : ""), s.decision ? s.decision.selection.replace("_", " ") : "decide"],
+      ["Build", anyFailed ? "failed" : allDone ? "done" : has(s, "TASK_STARTED") ? "active" : "", anyFailed ? "failed" : s.tasks.length ? s.tasks.length + " agent" + (single ? "" : "s") : "agents"],
+      ["Handoff", single ? "skipped" : has(s, "CONTRACT_ACKNOWLEDGED") ? "done" : has(s, "CONTRACT_PROPOSED") ? "active" : "", single ? "not needed" : has(s, "CONTRACT_ACKNOWLEDGED") ? "acknowledged" : has(s, "CONTRACT_PROPOSED") ? "awaiting you" : "contract"],
+      ["Verify", fin ? (fin.exitCode === 0 ? "done" : "failed") : has(s, "VERIFICATION_STARTED") ? "active" : "", fin ? "exit " + fin.exitCode : "node --test"]
+    ];
+    put($("rail"), steps.map(function (st) {
+      return h("div", { class: "step " + (m ? st[1] : "") }, h("div", { class: "bar" }), h("div", { class: "name", text: st[0] }), h("div", { class: "hint", text: m ? st[2] : "" }));
+    }));
+
+    var what, button = null, extra = null;
+    var status = m ? m.status : null;
+    if (!m) {
+      what = ["Start the demo mission", mode === "claude" ? "Two live Claude Code agents will build a mock Google sign-in in isolated copies of the sample app." : "Deterministic scripted agents will build a mock Google sign-in. Switch to Claude Code for live agents."];
+      button = h("button", { class: "btn primary", type: "button", onclick: function () { openEvent = null; act("/api/mission/start", { agentMode: mode }); } }, "Start mission");
+    } else if (s.pendingContract) {
+      what = ["The backend agent proposed an API contract", "The frontend agent stays blocked until you acknowledge it."];
+      extra = h("pre", { class: "code" }, JSON.stringify(s.pendingContract.payload.contract, null, 2));
+      button = h("button", { class: "btn primary", type: "button", onclick: function () { act("/api/contract/ack"); } }, "Acknowledge contract");
+    } else if (status === "integrating") {
+      what = ["Every agent finished", "Merge their isolated workspaces and run the real test suite."];
+      button = h("button", { class: "btn primary", type: "button", onclick: function () { this.disabled = true; act("/api/integrate"); } }, "Merge and verify");
+    } else if (status === "verifying") {
+      what = ["Running node --test", "The result is the process exit code, nothing else."];
+    } else if (status === "passed") {
+      what = ["Verified", "The merged code passed its tests (exit 0). Every step above is in the audit trail."];
+      button = h("button", { class: "btn", type: "button", onclick: function () { openEvent = null; act("/api/mission/start", { agentMode: mode }); } }, "Run again");
+    } else if (status === "failed") {
+      var why = s.events.filter(function (e) { return e.type === "TASK_FAILED"; }).map(function (e) { return e.payload.reason; })[0];
+      what = ["Mission failed", why ? String(why) : "The tests did not pass. See verification below."];
+      button = h("button", { class: "btn", type: "button", onclick: function () { openEvent = null; act("/api/mission/start", { agentMode: mode }); } }, "Run again");
+    } else {
+      var waiting = s.tasks.some(function (t) { return t.status === "blocked"; });
+      what = [s.agentMode === "claude" ? "Live agents are working" : "Agents are working", waiting ? "The frontend waits for the backend's contract." : "Their edits appear in the agents panel as they happen."];
+    }
+    put($("action"), [h("div", { class: "what" }, h("strong", { text: what[0] }), h("span", { text: what[1] }), extra), button]);
+  }
+
+  /* ---------- agents ---------- */
+  function renderAgents(s) {
+    $("agentsSub").textContent = s.mission ? (s.agentMode === "claude" ? "live Claude Code" : "scripted, not an LLM") : "";
+    if (!s.tasks.length) { put($("agents"), [h("div", { class: "empty", text: "Agents appear here once the route is decided." })]); return; }
+    put($("agents"), s.tasks.map(function (t) {
+      var acts = s.events.filter(function (e) { return e.type === "AGENT_ACTIVITY" && e.taskId === t.id; });
+      var last = acts.slice(-5).map(function (e) {
+        var p = e.payload;
+        if (p.activity === "finished") return h("div", null, h("b", { text: "done" }), (p.turns ? p.turns + " turns · " : "") + Math.round((p.durationMs || 0) / 1000) + "s");
+        return h("div", { title: p.path || p.command || "" }, h("b", { text: p.activity }), p.path || p.command || "");
+      });
+      var cls = t.status === "completed" ? "ok" : t.status === "failed" ? "bad" : t.status === "blocked" ? "warn" : "accent";
+      var failed = s.events.filter(function (e) { return e.type === "TASK_FAILED" && e.taskId === t.id; })[0];
+      return h("div", { class: "agent" },
+        h("div", { class: "row between" }, h("span", { class: "role", text: t.role }), h("span", { class: "tag " + cls, text: t.status })),
+        t.status === "blocked" ? h("div", { class: "faint", text: "Waiting for an acknowledged contract." }) : null,
+        last.length ? h("div", { class: "acts" }, ...last) : (t.status === "running" ? h("div", { class: "faint", text: "Reading the project..." }) : null),
+        failed ? h("div", { class: "tag bad", text: String(failed.payload.reason) }) : null,
+        t.agentThreadId ? h("div", { class: "faint mono", text: t.agentThreadId + (acts.length ? " · " + acts.length + " actions" : "") }) : null);
+    }));
+  }
+
+  /* ---------- decision ---------- */
+  function renderDecision(s) {
+    var d = s.decision;
+    if (!d) { $("decisionSub").textContent = ""; put($("decision"), [h("div", { class: "empty", text: "Single agent or parallel agents? Decided when the mission starts." })]); return; }
+    $("decisionSub").textContent = d.provider === "jev" ? "Jev model inference" : d.provider === "rules_fallback" ? "rules fallback, not a model" : "manual override";
+    var rows = d.alternatives.map(function (alt) {
+      var p = d.probabilities && d.probabilities[alt] !== undefined ? d.probabilities[alt] : null;
+      var chosen = alt === d.selection;
+      var track = h("div", { class: "track" }, h("i", { style: "width:" + (p === null ? (chosen ? 100 : 0) : p * 100) + "%" }));
+      return h("div", { class: "prob" + (chosen ? " chosen" : "") }, h("span", { class: "name", text: alt.replace("_", " ") }), track, h("span", { class: "pct", text: p === null ? (chosen ? "rule" : "") : Math.round(p * 100) + "%" }));
+    });
+    var meta = [d.modelId, d.latencyMs !== undefined ? d.latencyMs + " ms" : null, d.fallbackReason ? "reason: " + d.fallbackReason.replace(/_/g, " ") : null].filter(Boolean).join(" · ");
+    put($("decision"), [h("div", { class: "stack" }, ...rows, h("div", { class: "faint mono", text: meta }),
+      h("details", null, h("summary", { text: "What was sent to the decision engine" }), h("pre", { class: "code" }, d.inputSummary)))]);
+  }
+
+  /* ---------- memories ---------- */
+  function renderMemories(s) {
+    if (!s.memories.length) { put($("memories"), [h("div", { class: "empty", text: "No decisions yet. Save one, then run with and without it to see the difference in the graph." })]); return; }
+    var used = {}; s.events.forEach(function (e) { if (e.type === "MEMORY_RETRIEVED") (e.payload.memoryIds || []).forEach(function (id) { used[id] = true; }); });
+    put($("memories"), s.memories.map(function (m) {
+      return h("div", { class: "memory" }, h("div", { class: "row between" }, h("strong", { text: m.title }), used[m.id] ? h("span", { class: "tag ok", text: "sent to agents" }) : null), h("span", { class: "muted", text: m.body }));
+    }));
+  }
+
+  /* ---------- verification ---------- */
+  function renderVerification(s) {
+    var v = s.verification;
+    if (!v) { $("verifySub").textContent = ""; put($("verification"), [h("div", { class: "empty", text: s.mission && s.mission.status === "verifying" ? "Running..." : "Runs after every agent has finished and the workspaces are merged." })]); return; }
+    $("verifySub").textContent = v.command + " · " + v.durationMs + " ms";
+    var merge = s.integration ? h("div", { class: "faint", text: s.integration.applied.length + " files merged · " + s.integration.conflicts.length + " conflicts" }) : null;
+    put($("verification"), [h("div", { class: "stack" },
+      h("div", { class: "row" }, h("span", { class: "tag " + (v.exitCode === 0 ? "ok" : "bad"), text: v.exitCode === 0 ? "passed · exit 0" : "failed · exit " + v.exitCode }), merge),
+      h("pre", { class: "code" }, String(v.output || "").trim()))]);
+  }
+
+  /* ---------- timeline ---------- */
+  function renderTimeline(s) {
+    if (!s.events.length) { put($("timeline"), [h("div", { class: "empty", text: "Nothing recorded yet." })]); return; }
+    var byId = {}; s.events.forEach(function (e) { byId[e.id] = e; });
+    var nodes = [];
+    s.events.forEach(function (e) {
+      var minor = e.type === "AGENT_ACTIVITY" || e.type === "GRAPH_EDGE_ADDED";
+      nodes.push(h("div", { class: "ev" + (minor ? " minor" : "") + (openEvent === e.id ? " open" : ""), role: "button", tabindex: "0",
+        onclick: function () { openEvent = openEvent === e.id ? null : e.id; renderTimeline(state); },
+        onkeydown: function (k) { if (k.key === "Enter") { openEvent = openEvent === e.id ? null : e.id; renderTimeline(state); } } },
+        h("span", { class: "seq", text: "#" + e.seq }), h("span", { class: "t", text: elapsed(s, e) }),
+        h("span", { class: "what", text: describe(s, e) }),
+        h("span", { class: "who", text: who(s, e.source) + (e.recipient ? " → " + who(s, e.recipient) : "") })));
+      if (openEvent === e.id) {
+        var cause = e.causedByEventId ? byId[e.causedByEventId] : null;
+        nodes.push(h("div", { class: "detail" },
+          h("div", { class: "faint", text: "Caused by " + (cause ? "#" + cause.seq + " " + (LABEL[cause.type] || cause.type) : "nothing earlier") + (e.evidenceRef ? " · evidence " + e.evidenceRef : "") + " · " + e.timestamp }),
+          h("pre", { class: "code" }, JSON.stringify(e.payload, null, 2))));
+      }
+    });
+    put($("timeline"), nodes);
+  }
+
+  /* ---------- graph ---------- */
+  function renderGraph(s) {
+    var root = $("graph"); root.replaceChildren();
+    var files = s.graph.nodes.filter(function (n) { return n.kind === "file"; });
+    var edges = s.graph.edges.filter(function (e) { return e.relation === "imports"; });
+    var added = {}; s.graph.addedEdgeIds.forEach(function (id) { added[id] = true; });
+    var dirOf = function (p) { return p.indexOf("/") < 0 ? "." : p.slice(0, p.lastIndexOf("/")); };
+    var dirs = []; files.forEach(function (n) { var d = dirOf(n.label); if (dirs.indexOf(d) < 0) dirs.push(d); }); dirs.sort();
+    var colW = 210, rowH = 40, nodeW = 172, nodeH = 28, top = 34, pad = 16, pos = {}, rows = 0;
+    dirs.forEach(function (d, ci) {
+      var inDir = files.filter(function (n) { return dirOf(n.label) === d; }).sort(function (a, b) { return a.label < b.label ? -1 : 1; });
+      rows = Math.max(rows, inDir.length);
+      inDir.forEach(function (n, ri) { pos[n.id] = { x: pad + ci * colW, y: top + ri * rowH }; });
+    });
+    var W = pad * 2 + Math.max(dirs.length, 1) * colW - (colW - nodeW), H = top + rows * rowH + 8;
+    root.setAttribute("viewBox", "0 0 " + W + " " + H); root.setAttribute("width", W); root.setAttribute("height", H);
+    var defs = svg("defs", {});
+    [["arrow", "var(--ink-3)"], ["arrowNew", "var(--accent)"]].forEach(function (a) {
+      var mk = svg("marker", { id: a[0], viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "6", markerHeight: "6", orient: "auto-start-reverse" });
+      var p = svg("path", { d: "M0 1L9 5L0 9z" }); p.style.fill = a[1]; mk.appendChild(p); defs.appendChild(mk);
+    });
+    root.appendChild(defs);
+    dirs.forEach(function (d, ci) {
+      var lane = svg("rect", { x: pad + ci * colW - 8, y: 8, width: nodeW + 16, height: H - 12, rx: 10 }); lane.style.fill = "var(--sunken)"; lane.style.opacity = ".6"; root.appendChild(lane);
+      var t = svg("text", { x: pad + ci * colW, y: 24, "class": "lane-label" }); t.textContent = d.toUpperCase() + "/"; root.appendChild(t);
+    });
+    var newNodes = {};
+    edges.forEach(function (e) { if (added[e.id]) { newNodes[e.from] = true; newNodes[e.to] = true; } });
+    edges.slice().sort(function (a, b) { return (added[a.id] ? 1 : 0) - (added[b.id] ? 1 : 0); }).forEach(function (e) {
+      var a = pos[e.from], b = pos[e.to]; if (!a || !b) return;
+      var y1 = a.y + nodeH / 2, y2 = b.y + nodeH / 2, x1, x2, d;
+      if (b.x > a.x) { x1 = a.x + nodeW; x2 = b.x; d = "M" + x1 + " " + y1 + " C" + (x1 + 40) + " " + y1 + " " + (x2 - 40) + " " + y2 + " " + x2 + " " + y2; }
+      else if (b.x < a.x) { x1 = a.x; x2 = b.x + nodeW; d = "M" + x1 + " " + y1 + " C" + (x1 - 40) + " " + y1 + " " + (x2 + 40) + " " + y2 + " " + x2 + " " + y2; }
+      else { x1 = a.x + nodeW; x2 = b.x + nodeW; d = "M" + x1 + " " + y1 + " C" + (x1 + 30) + " " + y1 + " " + (x2 + 30) + " " + y2 + " " + x2 + " " + y2; }
+      var isNew = !!added[e.id], sel = selectedEdge === e.id;
+      var path = svg("path", { d: d, fill: "none", "marker-end": isNew ? "url(#arrowNew)" : "url(#arrow)" });
+      path.style.stroke = isNew ? "var(--accent)" : "var(--ink-3)"; path.style.strokeWidth = sel ? 3 : isNew ? 2 : 1.2; path.style.opacity = isNew || sel ? 1 : .55; path.style.cursor = "pointer";
+      var hit = svg("path", { d: d, fill: "none" }); hit.style.stroke = "transparent"; hit.style.strokeWidth = 12; hit.style.cursor = "pointer";
+      var pick = function () { selectedEdge = e.id; $("edgeDetail").textContent = e.from.replace("file:", "") + " → " + e.to.replace("file:", "") + "  ·  evidence " + e.evidenceRef + (isNew ? "  ·  added by this mission" : ""); renderGraph(state); };
+      hit.addEventListener("click", pick); path.addEventListener("click", pick);
+      root.appendChild(path); root.appendChild(hit);
+    });
+    files.forEach(function (n) {
+      var p = pos[n.id], isNew = !!newNodes[n.id];
+      var r = svg("rect", { x: p.x, y: p.y, width: nodeW, height: nodeH, rx: 7 });
+      r.style.fill = "var(--surface)"; r.style.stroke = isNew ? "var(--accent)" : "var(--line-2)"; r.style.strokeWidth = isNew ? 1.5 : 1;
+      var t = svg("text", { x: p.x + 10, y: p.y + 18 }); t.textContent = n.label.slice(n.label.lastIndexOf("/") + 1);
+      var title = svg("title", {}); title.textContent = n.label;
+      root.appendChild(r); root.appendChild(t); r.appendChild(title);
+    });
+  }
+
+  function renderFoot(s) {
+    $("foot").textContent = (s.agentMode === "claude" || (!s.mission && mode === "claude"))
+      ? "Live mode: each agent is a real Claude Code process (claude -p) working in its own copy of the sample app, limited to file tools and node --test. The sign-in is a local mock, not live Google OAuth."
+      : "Scripted mode: the agents are deterministic scripts that edit real files, not an LLM. The decision call, audit trail, contract gate, graph scan, merge and test exit code are real. The sign-in is a local mock, not live Google OAuth.";
+  }
+
+  function render(s) {
+    state = s;
+    renderTop(s); renderHero(s); renderAgents(s); renderDecision(s); renderMemories(s); renderVerification(s); renderTimeline(s); renderGraph(s); renderFoot(s);
+  }
+  function poll() {
+    return api("/api/state").then(function (s) {
+      var json = JSON.stringify(s);
+      if (json === lastJson) return;
+      lastJson = json; render(s);
+    }).catch(function (e) { toast(e.message); });
+  }
+  function setMode(next) { mode = next; try { localStorage.setItem("forge.agentMode", next); } catch (e) {} if (state) render(state); }
+
+  $("modeScripted").onclick = function () { setMode("scripted"); };
+  $("modeClaude").onclick = function () { setMode("claude"); };
+  $("btnReset").onclick = function () { openEvent = null; selectedEdge = null; $("edgeDetail").textContent = ""; act("/api/reset"); };
+  $("btnDecision").onclick = function () { act("/api/decision", { title: $("dTitle").value, body: $("dBody").value }); };
+  poll(); setInterval(poll, 1000);
+})();
+</script>
+</body>
+</html>
